@@ -11,6 +11,7 @@ BLIMP_SUBSETS = ['adjunct_island', 'anaphor_gender_agreement', 'anaphor_number_a
 DEVICE = 'cuda'
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--model_path', type=str, default="")
 parser.add_argument('--model_type', type=str, required=True, choices=['encoder', 'decoder'])
 parser.add_argument('--batch_size', type=int, required=True, default=64)
 
@@ -148,9 +149,15 @@ def main():
 
     # load model
     if args.model_type == "encoder":
-        model = AutoModelForMaskedLM.from_pretrained("prajjwal1/bert-tiny").to(DEVICE)
+        if args.model_path != "":
+            model = AutoModelForMaskedLM.from_pretrained(args.model_path).to(DEVICE)
+        else:
+            model = AutoModelForMaskedLM.from_pretrained("prajjwal1/bert-tiny").to(DEVICE)
     else:
-        model = AutoModelForCausalLM.from_pretrained("sshleifer/tiny-gpt2").to(DEVICE)
+        if args.model_path != "":
+            model = AutoModelForCausalLM.from_pretrained(args.model_path).to(DEVICE)
+        else:
+            model = AutoModelForCausalLM.from_pretrained("sshleifer/tiny-gpt2").to(DEVICE)
 
     # print(f"Number of parameters: {model.num_parameters()}")
 
@@ -161,7 +168,7 @@ def main():
         # load dataset and tokenize
         dataset = datasets.load_dataset('nyu-mll/blimp', subset)
         dataset = dataset.map(tokenize_fn, batched=True, num_proc=4, remove_columns=dataset['train'].column_names) # map works with functions that return a dictionary
-        dataloader = torch.utils.data.DataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, collate_fn=padding_collate_fn)
+        dataloader = torch.utils.data.DataLoader(dataset['train'], batch_size=args.batch_size, shuffle=False, collate_fn=padding_collate_fn)
         result = evaluate_fn(model, dataloader, tokenizer)
         results[subset] = result
 
